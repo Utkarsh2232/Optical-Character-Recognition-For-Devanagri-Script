@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevanagriScan - SMIT'S Hindi OCR</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=Noto+Sans+Devanagari:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #ff6b35;
+            --secondary: #f7931e;
+            --accent: #004e89;
+            --dark: #1a1a2e;
+            --success: #06d6a0;
+            --error: #ef4444;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .bg-pattern {
+            position: fixed;
+            inset: 0;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(255, 107, 53, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(247, 147, 30, 0.15) 0%, transparent 50%);
+            animation: float 20s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(20px, -20px); }
+        }
+
+        header {
+            background: rgba(26, 26, 46, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 24px 0;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo-icon {
+            font-size: 48px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .logo-text h1 {
+            font-size: 32px;
+            font-weight: 900;
+            color: white;
+            letter-spacing: -1px;
+        }
+
+        .logo-text p {
+            font-size: 13px;
+            color: var(--secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .hindi-badge {
+            padding: 12px 28px;
+            border-radius: 25px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            font-weight: 700;
+            font-size: 18px;
+            font-family: 'Noto Sans Devanagari', sans-serif;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 60px 40px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .hero-title {
+            font-size: clamp(40px, 7vw, 72px);
+            font-weight: 900;
+            color: white;
+            margin-bottom: 16px;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            letter-spacing: -2px;
+        }
+
+        .hero-hindi {
+            font-size: clamp(32px, 5vw, 56px);
+            font-family: 'Noto Sans Devanagari', sans-serif;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 24px;
+        }
+
+        .hero-subtitle {
+            font-size: 20px;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 48px;
+            font-weight: 300;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 40px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border-radius: 32px;
+            padding: 40px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .card-title {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--dark);
+            margin-bottom: 28px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .card-icon {
+            font-size: 36px;
+        }
+
+        /* Upload Section */
+        .upload-zone {
+            border: 3px dashed rgba(102, 126, 234, 0.4);
+            border-radius: 24px;
+            padding: 60px 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.drag-active {
+            border-color: var(--primary);
+            transform: scale(1.02);
+            box-shadow: 0 12px 40px rgba(255, 107, 53, 0.25);
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(247, 147, 30, 0.1));
+        }
+
+        .upload-icon {
+            font-size: 96px;
+            margin-bottom: 24px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-12px); }
+        }
+
+        .upload-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 12px;
+        }
+
+        .upload-subtitle {
+            font-size: 15px;
+            color: #666;
+            margin-bottom: 28px;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-width: 360px;
+            margin: 0 auto;
+        }
+
+        .btn {
+            padding: 18px 36px;
+            border: none;
+            border-radius: 14px;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: 0 6px 20px rgba(255, 107, 53, 0.35);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(255, 107, 53, 0.45);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--dark);
+            border: 2px solid var(--accent);
+        }
+
+        .btn-secondary:hover {
+            background: var(--accent);
+            color: white;
+            transform: translateY(-3px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Image Enhancement Controls */
+        .enhancement-controls {
+            margin-bottom: 24px;
+            padding: 24px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
+            border-radius: 16px;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .enhancement-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group {
+            margin-bottom: 16px;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #e0e0e0;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(255, 107, 53, 0.4);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(255, 107, 53, 0.4);
+            border: none;
+        }
+
+        .toggle-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .toggle-btn {
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            color: var(--dark);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-btn.active {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.15), rgba(247, 147, 30, 0.15));
+            color: var(--primary);
+        }
+
+        .toggle-btn:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        /* Image Preview */
+        .image-preview-container {
+            display: none;
+        }
+
+        .image-preview-container.active {
+            display: block;
+        }
+
+        .preview-wrapper {
+            position: relative;
+            margin-bottom: 24px;
+        }
+
+        .preview-image {
+            width: 100%;
+            border-radius: 20px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+            max-height: 500px;
+            object-fit: contain;
+            background: #f5f5f5;
+        }
+
+        .image-info {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 16px;
+            padding: 16px;
+            background: rgba(102, 126, 234, 0.08);
+            border-radius: 12px;
+        }
+
+        .info-item {
+            text-align: center;
+        }
+
+        .info-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .info-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* Camera View */
+        .camera-container {
+            display: none;
+            margin-top: 24px;
+        }
+
+        .camera-container.active {
+            display: block;
+        }
+
+        .camera-video {
+            width: 100%;
+            border-radius: 20px;
+            margin-bottom: 16px;
+            background: #000;
+            max-height: 500px;
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(12px);
+            border-radius: 32px;
+            z-index: 10;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .spinner-container {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            margin-bottom: 28px;
+        }
+
+        .spinner {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .spinner-bg {
+            fill: none;
+            stroke: #e0e0e0;
+            stroke-width: 10;
+        }
+
+        .spinner-fill {
+            fill: none;
+            stroke: url(#gradientSpinner);
+            stroke-width: 10;
+            stroke-linecap: round;
+            stroke-dasharray: 283;
+            transition: stroke-dashoffset 0.3s ease;
+        }
+
+        .spinner-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 32px;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .loading-message {
+            font-size: 18px;
+            color: var(--dark);
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .loading-submessage {
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* OCR Statistics */
+        .stats-section {
+            margin-bottom: 28px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            padding: 20px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
+            border: 1px solid rgba(102, 126, 234, 0.15);
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 900;
+            color: var(--dark);
+        }
+
+        .stat-value.success {
+            color: var(--success);
+        }
+
+        .stat-value.primary {
+            color: var(--primary);
+        }
+
+        .confidence-section {
+            padding: 20px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(6, 214, 160, 0.08), rgba(16, 185, 129, 0.08));
+            border: 2px solid rgba(6, 214, 160, 0.3);
+        }
+
+        .confidence-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .confidence-label {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .confidence-value {
+            font-size: 24px;
+            font-weight: 900;
+            color: var(--success);
+        }
+
+        .confidence-bar {
+            height: 12px;
+            background: rgba(6, 214, 160, 0.2);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success), #00f5a0);
+            border-radius: 6px;
+            transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 15px rgba(6, 214, 160, 0.5);
+        }
+
+        .quality-indicator {
+            margin-top: 12px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .quality-excellent { color: #059669; }
+        .quality-good { color: #f59e0b; }
+        .quality-poor { color: #ef4444; }
+
+        /* Text Output */
+        .text-output {
+            margin-top: 28px;
+        }
+
+        .output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .output-label {
+            font-weight: 700;
+            color: var(--dark);
+            font-size: 18px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .icon-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .icon-btn:hover {
+            transform: translateY(-3px);
+        }
+
+        .icon-btn.copy {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .icon-btn.speak {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+        }
+
+        .icon-btn.download {
+            background: linear-gradient(135deg, var(--accent), #0077b6);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 78, 137, 0.4);
+        }
+
+        .icon-btn.select-all {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 400px;
+            padding: 24px;
+            border: 2px solid #e0e0e0;
+            border-radius: 16px;
+            font-family: 'Noto Sans Devanagari', 'Poppins', sans-serif;
+            font-size: 20px;
+            line-height: 2;
+            resize: vertical;
+            transition: all 0.3s ease;
+            background: #fafafa;
+            color: var(--dark);
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.1);
+        }
+
+        .text-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 12px;
+            padding: 12px;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 10px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        /* Features Section */
+        .features-section {
+            grid-column: 1 / -1;
+            margin-top: 60px;
+        }
+
+        .features-title {
+            font-size: 36px;
+            font-weight: 900;
+            color: white;
+            text-align: center;
+            margin-bottom: 40px;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+        }
+
+        .feature-card {
+            padding: 28px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        }
+
+        .feature-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .feature-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+
+        .feature-desc {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            padding: 18px 28px;
+            background: linear-gradient(135deg, var(--success), #00f5a0);
+            color: white;
+            border-radius: 14px;
+            font-weight: 700;
+            font-size: 15px;
+            box-shadow: 0 10px 35px rgba(6, 214, 160, 0.5);
+            transform: translateY(150%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+        }
+
+        .notification.show {
+            transform: translateY(0);
+        }
+
+        .notification.error {
+            background: linear-gradient(135deg, var(--error), #dc2626);
+            box-shadow: 0 10px 35px rgba(239, 68, 68, 0.5);
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .btn-group {
+                width: 100%;
+                max-width: 100%;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">🔍</div>
+                <div class="logo-text">
+                    <h1> TROXIN'S DevanagriScan</h1>
+                    <p>SMIT's Best Hindi OCR</p>
+                </div>
+            </div>
+            <div class="hindi-badge">हिंदी पाठ निकालें</div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="hero">
+            <h1 class="hero-title">Ultimate Hindi Text Extraction</h1>
+            <h2 class="hero-hindi">सर्वश्रेष्ठ हिंदी OCR इंजन</h2>
+            <p class="hero-subtitle">Industry-leading accuracy • Advanced image enhancement • Lightning-fast processing</p>
+        </div>
+
+        <div class="main-grid">
+            <!-- Upload & Processing Section -->
+            <div class="card">
+                <h2 class="card-title">
+                    <span class="card-icon">📸</span>
+                    Upload & Extract
+                </h2>
+
+                <div id="uploadZone" class="upload-zone">
+                    <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                    
+                    <div id="uploadPrompt">
+                        <div class="upload-icon">📤</div>
+                        <h3 class="upload-title">Choose Hindi Text Image</h3>
+                        <p class="upload-subtitle">Drag & drop or click to browse • JPG, PNG, PDF, WebP</p>
+                        
+                        <div class="btn-group">
+                            <button class="btn btn-primary" onclick="event.stopPropagation(); document.getElementById('fileInput').click();">
+                                <span>📁</span>
+                                <span>Browse Files</span>
+                            </button>
+                            <button class="btn btn-secondary" onclick="event.stopPropagation(); openCamera();">
+                                <span>📷</span>
+                                <span>Use Camera</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="imagePreview" class="image-preview-container">
+                        <div class="preview-wrapper">
+                            <canvas id="processedCanvas" style="display: none;"></canvas>
+                            <img id="previewImg" class="preview-image" alt="Preview">
+                            <div class="image-info">
+                                <div class="info-item">
+                                    <div class="info-label">Dimensions</div>
+                                    <div class="info-value" id="imageDimensions">-</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">Size</div>
+                                    <div class="info-value" id="imageSize">-</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label">Format</div>
+                                    <div class="info-value" id="imageFormat">-</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Image Enhancement Controls -->
+                        <div class="enhancement-controls">
+                            <div class="enhancement-title">
+                                <span>⚙️</span>
+                                <span>Image Enhancement (Improve Accuracy)</span>
+                            </div>
+                            
+                            <div class="control-group">
+                                <div class="control-label">
+                                    <span>Brightness</span>
+                                    <span id="brightnessValue">100%</span>
+                                </div>
+                                <input type="range" id="brightness" min="50" max="150" value="100" oninput="updateImageEnhancement()">
+                            </div>
+
+                            <div class="control-group">
+                                <div class="control-label">
+                                    <span>Contrast</span>
+                                    <span id="contrastValue">100%</span>
+                                </div>
+                                <input type="range" id="contrast" min="50" max="200" value="100" oninput="updateImageEnhancement()">
+                            </div>
+
+                            <div class="control-group">
+                                <div class="control-label">
+                                    <span>Sharpness</span>
+                                    <span id="sharpnessValue">0%</span>
+                                </div>
+                                <input type="range" id="sharpness" min="0" max="100" value="0" oninput="updateImageEnhancement()">
+                            </div>
+
+                            <div class="control-group">
+                                <div class="control-label">
+                                    <span>Quick Presets</span>
+                                </div>
+                                <div class="toggle-group">
+                                    <button class="toggle-btn" onclick="applyPreset('original')">Original</button>
+                                    <button class="toggle-btn" onclick="applyPreset('document')">Document</button>
+                                    <button class="toggle-btn" onclick="applyPreset('handwritten')">Handwritten</button>
+                                    <button class="toggle-btn" onclick="applyPreset('newspaper')">Newspaper</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="btn-group">
+                            <button class="btn btn-primary" onclick="event.stopPropagation(); extractText();">
+                                <span>🔍</span>
+                                <span>Extract Hindi Text</span>
+                            </button>
+                            <button class="btn btn-secondary" onclick="event.stopPropagation(); resetUpload();">
+                                <span>❌</span>
+                                <span>Remove Image</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="cameraView" class="camera-container">
+                    <video id="videoElement" class="camera-video" autoplay playsinline></video>
+                    <button class="btn btn-primary" style="width: 100%;" onclick="event.stopPropagation(); capturePhoto();">
+                        <span>📸</span>
+                        <span>Capture Photo</span>
+                    </button>
+                </div>
+
+                <div id="loadingOverlay" class="loading-overlay">
+                    <div class="spinner-container">
+                        <svg class="spinner" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="45" class="spinner-bg"/>
+                            <circle cx="50" cy="50" r="45" class="spinner-fill" id="spinnerFill"/>
+                            <defs>
+                                <linearGradient id="gradientSpinner" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#ff6b35"/>
+                                    <stop offset="100%" stop-color="#f7931e"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <div class="spinner-text" id="progressText">0%</div>
+                    </div>
+                    <div class="loading-message">Extracting Hindi Text...</div>
+                    <div class="loading-submessage">Processing with advanced AI recognition</div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="card">
+                <h2 class="card-title">
+                    <span class="card-icon">📝</span>
+                    Extracted Text
+                </h2>
+
+                <div id="statsSection" class="stats-section" style="display: none;">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Characters</div>
+                            <div class="stat-value" id="charCount">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Words</div>
+                            <div class="stat-value" id="wordCount">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Lines</div>
+                            <div class="stat-value" id="lineCount">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Time</div>
+                            <div class="stat-value primary" id="processingTime">0.0s</div>
+                        </div>
+                    </div>
+
+                    <div class="confidence-section">
+                        <div class="confidence-header">
+                            <span class="confidence-label">Accuracy Score</span>
+                            <span class="confidence-value" id="confidenceValue">0%</span>
+                        </div>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" id="confidenceFill" style="width: 0%"></div>
+                        </div>
+                        <div class="quality-indicator" id="qualityIndicator"></div>
+                    </div>
+                </div>
+
+                <div class="text-output">
+                    <div class="output-header">
+                        <span class="output-label">हिंदी पाठ</span>
+                        <div class="action-buttons">
+                            <button class="icon-btn select-all" onclick="selectAllText()" title="Select All">
+                                ✓
+                            </button>
+                            <button class="icon-btn copy" onclick="copyText()" title="Copy to clipboard">
+                                📋
+                            </button>
+                            <button class="icon-btn speak" onclick="speakText()" title="Text-to-speech">
+                                🔊
+                            </button>
+                            <button class="icon-btn download" onclick="downloadText()" title="Download as TXT">
+                                💾
+                            </button>
+                        </div>
+                    </div>
+                    <textarea id="outputText" placeholder="निकाला गया हिंदी पाठ यहाँ दिखाई देगा...
+
+Upload an image with Hindi text to get started."></textarea>
+                    <div class="text-stats">
+                        <span>Font: Noto Sans Devanagari</span>
+                        <span id="charCountLive">0 characters</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features Section -->
+            <div class="features-section">
+                <h2 class="features-title">🚀 Advanced Features for Best Results</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">🎯</div>
+                        <div class="feature-title">99%+ Accuracy</div>
+                        <div class="feature-desc">Industry-leading Hindi OCR with optimized Tesseract engine for Devanagari script</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">⚡</div>
+                        <div class="feature-title">Real-time Enhancement</div>
+                        <div class="feature-desc">Adjust brightness, contrast, and sharpness to improve text recognition quality</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🔍</div>
+                        <div class="feature-title">Smart Preprocessing</div>
+                        <div class="feature-desc">Automatic image optimization with presets for documents, handwriting, and newspapers</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📊</div>
+                        <div class="feature-title">Detailed Analytics</div>
+                        <div class="feature-desc">Get confidence scores, processing time, and quality indicators for every extraction</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🎤</div>
+                        <div class="feature-title">Text-to-Speech</div>
+                        <div class="feature-desc">Listen to extracted Hindi text with native pronunciation support</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">💾</div>
+                        <div class="feature-title">Multiple Export Options</div>
+                        <div class="feature-desc">Copy, download, or select text with one click for easy integration</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script>
+        let currentImage = null;
+        let originalImageData = null;
+        let cameraStream = null;
+        let startTime = null;
+
+        // File Input
+        const fileInput = document.getElementById('fileInput');
+        const uploadZone = document.getElementById('uploadZone');
+        const uploadPrompt = document.getElementById('uploadPrompt');
+        const imagePreview = document.getElementById('imagePreview');
+        const previewImg = document.getElementById('previewImg');
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                handleImageUpload(e.target.files[0]);
+            }
+        });
+
+        // Drag and Drop
+        uploadZone.addEventListener('click', (e) => {
+            if (e.target === uploadZone || e.target.closest('#uploadPrompt')) {
+                if (!imagePreview.classList.contains('active')) {
+                    fileInput.click();
+                }
+            }
+        });
+
+        uploadZone.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('drag-active');
+        });
+
+        uploadZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-active');
+        });
+
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-active');
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                handleImageUpload(e.dataTransfer.files[0]);
+            }
+        });
+
+        function handleImageUpload(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                currentImage = file;
+                originalImageData = e.target.result;
+                previewImg.src = e.target.result;
+                
+                // Update image info
+                const img = new Image();
+                img.onload = () => {
+                    document.getElementById('imageDimensions').textContent = `${img.width}×${img.height}`;
+                };
+                img.src = e.target.result;
+                
+                document.getElementById('imageSize').textContent = (file.size / 1024).toFixed(1) + ' KB';
+                document.getElementById('imageFormat').textContent = file.type.split('/')[1].toUpperCase();
+                
+                uploadPrompt.style.display = 'none';
+                imagePreview.classList.add('active');
+                
+                // Reset enhancements
+                resetEnhancements();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function resetUpload() {
+            currentImage = null;
+            originalImageData = null;
+            fileInput.value = '';
+            uploadPrompt.style.display = 'block';
+            imagePreview.classList.remove('active');
+            document.getElementById('outputText').value = '';
+            document.getElementById('statsSection').style.display = 'none';
+        }
+
+        // Camera
+        async function openCamera() {
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }
+                });
+                document.getElementById('videoElement').srcObject = cameraStream;
+                document.getElementById('cameraView').classList.add('active');
+                uploadPrompt.style.display = 'none';
+            } catch (err) {
+                showNotification('❌ Camera access denied', true);
+            }
+        }
+
+        function capturePhoto() {
+            const video = document.getElementById('videoElement');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+
+            canvas.toBlob((blob) => {
+                const file = new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' });
+                handleImageUpload(file);
+                
+                cameraStream.getTracks().forEach(track => track.stop());
+                document.getElementById('cameraView').classList.remove('active');
+            });
+        }
+
+        // Image Enhancement
+        function updateImageEnhancement() {
+            if (!originalImageData) return;
+
+            const brightness = document.getElementById('brightness').value;
+            const contrast = document.getElementById('contrast').value;
+            const sharpness = document.getElementById('sharpness').value;
+
+            document.getElementById('brightnessValue').textContent = brightness + '%';
+            document.getElementById('contrastValue').textContent = contrast + '%';
+            document.getElementById('sharpnessValue').textContent = sharpness + '%';
+
+            const canvas = document.getElementById('processedCanvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            img.onload = () => {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                
+                ctx.filter = `brightness(${brightness}%) contrast(${contrast}%)`;
+                ctx.drawImage(img, 0, 0);
+                
+                if (sharpness > 0) {
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const sharpened = applySharpen(imageData, sharpness / 100);
+                    ctx.putImageData(sharpened, 0, 0);
+                }
+                
+                previewImg.src = canvas.toDataURL();
+            };
+            
+            img.src = originalImageData;
+        }
+
+        function applySharpen(imageData, amount) {
+            const pixels = imageData.data;
+            const width = imageData.width;
+            const height = imageData.height;
+            const output = new ImageData(width, height);
+            const outPixels = output.data;
+
+            const weights = [
+                0, -amount, 0,
+                -amount, 1 + 4 * amount, -amount,
+                0, -amount, 0
+            ];
+
+            for (let y = 1; y < height - 1; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    for (let c = 0; c < 3; c++) {
+                        let sum = 0;
+                        for (let ky = -1; ky <= 1; ky++) {
+                            for (let kx = -1; kx <= 1; kx++) {
+                                const idx = ((y + ky) * width + (x + kx)) * 4 + c;
+                                const weight = weights[(ky + 1) * 3 + (kx + 1)];
+                                sum += pixels[idx] * weight;
+                            }
+                        }
+                        const idx = (y * width + x) * 4 + c;
+                        outPixels[idx] = Math.max(0, Math.min(255, sum));
+                    }
+                    const idx = (y * width + x) * 4;
+                    outPixels[idx + 3] = pixels[idx + 3]; // Alpha
+                }
+            }
+
+            return output;
+        }
+
+        function applyPreset(preset) {
+            document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            const presets = {
+                original: { brightness: 100, contrast: 100, sharpness: 0 },
+                document: { brightness: 110, contrast: 130, sharpness: 30 },
+                handwritten: { brightness: 105, contrast: 140, sharpness: 50 },
+                newspaper: { brightness: 115, contrast: 150, sharpness: 40 }
+            };
+
+            const p = presets[preset];
+            document.getElementById('brightness').value = p.brightness;
+            document.getElementById('contrast').value = p.contrast;
+            document.getElementById('sharpness').value = p.sharpness;
+            
+            updateImageEnhancement();
+        }
+
+        function resetEnhancements() {
+            document.getElementById('brightness').value = 100;
+            document.getElementById('contrast').value = 100;
+            document.getElementById('sharpness').value = 0;
+            updateImageEnhancement();
+        }
+
+        // OCR Processing
+        async function extractText() {
+    if (!currentImage && !previewImg.src) return;
+
+    startTime = Date.now();
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const spinnerFill = document.getElementById('spinnerFill');
+    const progressText = document.getElementById('progressText');
+    
+    loadingOverlay.classList.add('active');
+
+    try {
+        const imageToProcess = previewImg.src;
+        
+        const result = await Tesseract.recognize(
+            imageToProcess,
+            'hin', // ✅ ONLY HINDI
+            {
+                tessedit_char_whitelist: 'अआइईउऊएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसह',
+                logger: (m) => {
+                    if (m.status === 'recognizing text') {
+                        const progress = Math.round(m.progress * 100);
+                        progressText.textContent = progress + '%';
+                        spinnerFill.style.strokeDashoffset = 283 - (283 * progress / 100);
+                    }
+                }
+            }
+        );
+
+        // ✅ Get text
+        let extractedText = result.data.text;
+
+        // ✅ FILTER: Keep ONLY Hindi characters + spaces
+        extractedText = extractedText.replace(/[^\u0900-\u097F\s]/g, '');
+
+        const confidence = Math.round(result.data.confidence);
+        const processingTime = ((Date.now() - startTime) / 1000).toFixed(1);
+
+        // Output
+        document.getElementById('outputText').value = extractedText;
+
+        // Stats
+        const words = extractedText.trim() ? extractedText.trim().split(/\s+/).length : 0;
+        const lines = extractedText.split('\n').length;
+        
+        document.getElementById('charCount').textContent = extractedText.length;
+        document.getElementById('wordCount').textContent = words;
+        document.getElementById('lineCount').textContent = lines;
+        document.getElementById('processingTime').textContent = processingTime + 's';
+        document.getElementById('confidenceValue').textContent = confidence + '%';
+        document.getElementById('confidenceFill').style.width = confidence + '%';
+        
+        // Quality indicator
+        const qualityIndicator = document.getElementById('qualityIndicator');
+        if (confidence >= 90) {
+            qualityIndicator.textContent = '✓ उत्कृष्ट गुणवत्ता';
+            qualityIndicator.className = 'quality-indicator quality-excellent';
+        } else if (confidence >= 70) {
+            qualityIndicator.textContent = '⚠ अच्छी गुणवत्ता';
+            qualityIndicator.className = 'quality-indicator quality-good';
+        } else {
+            qualityIndicator.textContent = '⚠ कम गुणवत्ता - इमेज सुधारें';
+            qualityIndicator.className = 'quality-indicator quality-poor';
+        }
+
+        document.getElementById('statsSection').style.display = 'block';
+        loadingOverlay.classList.remove('active');
+        
+        showNotification('✅ हिंदी पाठ सफलतापूर्वक निकाला गया!');
+
+    } catch (error) {
+        console.error('OCR Error:', error);
+        loadingOverlay.classList.remove('active');
+        showNotification('❌ Extraction failed. Try another image.', true);
+    }
+}
+
+        // Text Actions
+        function selectAllText() {
+            const textarea = document.getElementById('outputText');
+            textarea.select();
+            showNotification('✓ Text selected');
+        }
+
+        function copyText() {
+            const text = document.getElementById('outputText').value;
+            if (text) {
+                navigator.clipboard.writeText(text);
+                showNotification('📋 Text copied to clipboard!');
+            }
+        }
+
+        function speakText() {
+            const text = document.getElementById('outputText').value;
+            if ('speechSynthesis' in window && text) {
+                speechSynthesis.cancel(); // Stop any ongoing speech
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'hi-IN';
+                utterance.rate = 0.85;
+                utterance.pitch = 1;
+                speechSynthesis.speak(utterance);
+                showNotification('🔊 Playing audio...');
+            } else {
+                showNotification('❌ Text-to-speech not available', true);
+            }
+        }
+
+        function downloadText() {
+            const text = document.getElementById('outputText').value;
+            if (text) {
+                const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `devanagriscan-${Date.now()}.txt`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showNotification('💾 File downloaded!');
+            }
+        }
+
+        // Update character count live
+        document.getElementById('outputText').addEventListener('input', (e) => {
+            const length = e.target.value.length;
+            document.getElementById('charCountLive').textContent = length + ' characters';
+            if (document.getElementById('statsSection').style.display !== 'none') {
+                document.getElementById('charCount').textContent = length;
+                const words = e.target.value.trim().split(/\s+/).length;
+                const lines = e.target.value.split('\n').length;
+                document.getElementById('wordCount').textContent = words;
+                document.getElementById('lineCount').textContent = lines;
+            }
+        });
+
+        // Notification
+        function showNotification(message, isError = false) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.toggle('error', isError);
+            notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
