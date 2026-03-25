@@ -132,3 +132,4 @@ B.Tech CSE (AI and ML) — SMIT
 
 If you find this project useful, consider giving it a star on GitHub.
 
+https://69c2fb7391c2214868b0b68b--delightful-douhua-da6ffc.netlify.app/
